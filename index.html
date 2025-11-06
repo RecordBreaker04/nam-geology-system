@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NamGeo App</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-measure@3.1.0/dist/leaflet-measure.css" />
+</head>
+<body>
+    <header>
+        <button class="mobile-menu-button" id="mobileMenuButton">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="logo-container">
+            <img src="/static/img/Ministry-of-Industries,Mines-and-Energy.png" alt="Ministry of Industries,Mines and Energy" class="logo">
+            <div class="header-title">NamGeo App</div>
+         <img src="/static/img/namibia-geo-survey.png" alt="Geological Survey of Namibia Logo" class="logo">
+        </div>
+        <div class="header-controls">
+            <button id="loginButton"><i class="fas fa-user"></i> Login</button>
+            <button id="registerButton"><i class="fas fa-user-plus"></i> Register</button>
+            <button id="helpButton"><i class="fas fa-question-circle"></i> Help</button>
+            <button id="contactButton"><i class="fas fa-envelope"></i> Contact</button>
+        </div>
+    </header>
+    <div class="sidebar" id="sidebar">
+        <details open class="category">
+            <summary>Geo-Economic Data</summary>
+            <div class="category-content">
+                <div class="layer-control">
+                    <input type="checkbox" id="minerals" data-layer="minerals">
+                    <label for="minerals">Mineral Occurrences</label>
+                    <div class="download-options">
+                        <select class="format-select" data-layer="minerals">
+                            <option value="shp">SHP</option>
+                            <option value="gml">GML</option>
+                            <option value="csv">CSV</option>
+                            <option value="geojson">GeoJSON</option>
+                        </select>
+                        <button class="download-btn" data-layer="minerals"><i class="fas fa-download"></i></button>
+                    </div>
+                </div>
+                <div class="layer-control">
+                    <input type="checkbox" id="geology1M" data-layer="geology">
+                    <label for="geology1M">Geology 1M</label>
+                    <div class="download-options">
+                        <select class="format-select" data-layer="geology">
+                            <option value="shp">SHP</option>
+                            <option value="gml">GML</option>
+                            <option value="csv">CSV</option>
+                            <option value="geojson">GeoJSON</option>
+                        </select>
+                        <button class="download-btn" data-layer="geology"><i class="fas fa-download"></i></button>
+                    </div>
+                </div>
+                <select id="geologyType" style="display: none;">
+                    <option value="all">All Geology Types</option>
+                    <option value="igneous">Igneous Rocks</option>
+                    <option value="sedimentary">Sedimentary Rocks</option>
+                    <option value="metamorphic">Metamorphic Rocks</option>
+                    <option value="faults">Faults and Lineaments</option>
+                </select>
+            </div>
+        </details>
+        <details class="category">
+            <summary>Regional and National Boundaries</summary>
+            <div class="category-content">
+                <div class="layer-control">
+                    <input type="checkbox" id="Roads" data-layer="roads" checked>
+                    <label for="Roads">Roads</label>
+                    <i class="fas fa-info-circle" title="Show details"></i>
+                </div>
+                <div class="layer-control">
+                    <input type="checkbox" id="Districts" data-layer="districts" checked>
+                    <label for="Districts">Districts</label>
+                    <i class="fas fa-info-circle" title="Show details"></i>
+                </div>
+                <div class="layer-control">
+                    <input type="checkbox" id="TownsVillages" data-layer="towns_villages" checked>
+                    <label for="TownsVillages">Towns and Villages</label>
+                    <i class="fas fa-info-circle" title="Show details"></i>
+                </div>
+                <div class="layer-control">
+                    <input type="checkbox" id="Regions" data-layer="regions" checked>
+                    <label for="Regions">Regions</label>
+                    <i class="fas fa-info-circle" title="Show details"></i>
+                </div>
+                <div class="layer-control">
+                    <input type="checkbox" id="country" data-layer="country" checked>
+                    <label for="country">Country</label>
+                    <i class="fas fa-info-circle" title="Show details"></i>
+                </div>
+            </div>
+        </details>
+    </div>
+
+    <div class="sidebar-toggle" id="sidebarToggle">
+        <i class="fas fa-chevron-left"></i>
+    </div>
+
+    <div class="main-content">
+        <div class="tab-bar">
+            <button class="active" data-tab="map">Map Viewer</button>
+            <button data-tab="metadata">Metadata</button>
+            <button data-tab="tools">Tools</button>
+            <button data-tab="rock-identifier">Rock Identifier</button>
+        </div>
+        
+        <div class="tab-content active" id="map-tab">
+            <div id="map"></div>
+            
+            <!-- Collapsible Search Box -->
+            <div class="search-box" id="searchBox">
+                <div class="search-toggle" id="searchToggle">
+                    <i class="fas fa-search"></i>
+                </div>
+                <div class="search-content" id="searchContent">
+                    <div class="search-tabs">
+                        <div class="search-tab active" data-tab="place">Place Search</div>
+                        <div class="search-tab" data-tab="coordinates">Coordinates</div>
+                    </div>
+                    
+                    <div class="search-panel active" id="place-search">
+                        <input type="text" id="searchInput" placeholder="Search places in Namibia...">
+                        <button class="search-button" id="searchButton">Search</button>
+                        <div class="search-results" id="searchResults"></div>
+                    </div>
+                    
+                    <div class="search-panel" id="coordinates-search">
+                        <input type="text" id="latitudeInput" placeholder="Latitude (e.g., -22.5600)">
+                        <input type="text" id="longitudeInput" placeholder="Longitude (e.g., 17.0800)">
+                        <button class="search-button" id="goToCoordinates">Go to Location</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Compact Map Controls -->
+            <div class="map-controls" id="mapControls">
+                <div class="map-controls-row">
+                    <button class="map-control-button" id="zoomIn" title="Zoom in">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <button class="map-control-button" id="zoomOut" title="Zoom out">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <button class="map-control-button" id="fullExtent" title="Full extent">
+                        <i class="fas fa-globe"></i>
+                    </button>
+                    <button class="map-control-button" id="findLocation" title="Find my location">
+                        <i class="fas fa-location-arrow"></i>
+                    </button>
+                </div>
+                <div class="map-controls-row">
+                    <button class="map-control-button" id="selectByPoint" title="Select by point">
+                        <i class="fas fa-mouse-pointer"></i>
+                    </button>
+                    <button class="map-control-button" id="selectByPolygon" title="Select by polygon">
+                        <i class="fas fa-draw-polygon"></i>
+                    </button>
+                    <button class="map-control-button" id="measureTool" title="Measure distance">
+                        <i class="fas fa-ruler"></i>
+                    </button>
+                    <button class="map-control-button" id="drawPolygon" title="Draw polygon">
+                        <i class="fas fa-draw-polygon"></i>
+                    </button>
+                </div>
+                <div class="map-controls-row">
+                    <button class="map-control-button" id="drawPolyline" title="Draw polyline">
+                        <i class="fas fa-road"></i>
+                    </button>
+                    <button class="map-control-button" id="clearMap" title="Clear map">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <button class="map-control-button" id="aiAssistant" title="AI Assistant">
+                        <i class="fas fa-robot"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Compact Basemap Selector -->
+            <div class="basemap-selector" id="basemapSelector">
+                <div class="basemap-toggle" id="basemapToggle">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <div class="basemap-content" id="basemapContent">
+                    <div class="basemap-option active" data-basemap="osm">OpenStreetMap</div>
+                    <div class="basemap-option" data-basemap="satellite">Satellite</div>
+                    <div class="basemap-option" data-basemap="terrain">Terrain</div>
+                </div>
+            </div>
+            
+            <!-- Dynamic Legend - Only shows when layers are selected -->
+            <div class="legend" id="legend" style="display: none;">
+                <div class="legend-header">
+                    <h4>Legend</h4>
+                    <button class="legend-toggle" id="legendToggle">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                </div>
+                <div class="legend-content" id="legendContent"></div>
+            </div>
+            
+            <div class="coordinates-marker" id="coordinatesMarker">
+                Lat: 0.0000, Lng: 0.0000
+            </div>
+            
+            <div class="measurement-result" id="measurementResult"></div>
+            
+            <div class="selection-info" id="selectionInfo">
+                <h4>Selection Results</h4>
+                <div id="selectionContent"></div>
+                <button class="clear-selection" id="clearSelection">Clear Selection</button>
+            </div>
+
+            <!-- Attribute Table Modal -->
+            <div class="modal attribute-modal" id="attributeModal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div class="modal-title">Attribute Table</div>
+                        <button class="close-modal">&times;</button>
+                    </div>
+                    <div class="attribute-table-container">
+                        <table id="attributeTable">
+                            <thead>
+                                <tr id="attributeTableHeaders"></tr>
+                            </thead>
+                            <tbody id="attributeTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Rest of the tab content remains the same -->
+        <div class="tab-content" id="metadata-tab">
+            <h3>Dataset Identification</h3>
+            <table>
+                <tr><th>Title</th><td>Geological Map of Namibia</td></tr>
+                <tr><th>Originator</th><td>Geological Survey of Namibia</td></tr>
+                <tr><th>Publication Date</th><td>2025</td></tr>
+                <tr><th>Edition</th><td>1.0</td></tr>
+                <tr><th>Abstract</th><td>This digital dataset showing the geology of Namibia is based on the 2025 "Geological Map of Namibia" (Scale 1M)</td></tr>
+                <tr><th>Purpose</th><td>To make available a digital dataset covering the entire country</td></tr>
+            </table>
+            
+            <h3>Spatial Reference</h3>
+            <table>
+                <tr><th>Coordinate System</th><td>WGS 1984 UTM Zone 33S</td></tr>
+                <tr><th>EPSG Code</th><td>32733</td></tr>
+                <tr><th>Bounding Coordinates</th>
+                    <td>
+                        <strong>West:</strong> 11.747095°E<br>
+                        <strong>East:</strong> 25.264435°E<br>
+                        <strong>North:</strong> -16.956243°S<br>
+                        <strong>South:</strong> -28.965186°S
+                    </td>
+                </tr>
+            </table>
+            
+            <h3>Attributes</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Attribute</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>OBJECTID</td><td>OID</td><td>Internal feature number</td></tr>
+                    <tr><td>Shape</td><td>Geometry</td><td>Feature geometry</td></tr>
+                    <tr><td>NAMGEOL_ID</td><td>Double</td><td>Feature identifier</td></tr>
+                    <tr><td>AGE</td><td>String</td><td>Geological age</td></tr>
+                    <tr><td>FORMATION</td><td>String</td><td>Geological formation</td></tr>
+                    <tr><td>COMPLEX</td><td>String</td><td>Geological complex</td></tr>
+                    <tr><td>LITHCODE</td><td>String</td><td>Lithology code</td></tr>
+                    <tr><td>ROCKTYPES</td><td>String</td><td>Rock types</td></tr>
+                    <tr><td>AREA_SQKM</td><td>Double</td><td>Area in square kilometers</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="tab-content" id="tools-tab">
+            <h3>GIS Tools</h3>
+            <div class="tool-grid">
+                <div class="tool-card">
+                    <i class="fas fa-ruler-combined fa-3x"></i>
+                    <h4>Measurement</h4>
+                    <p>Measure distances and areas on the map</p>
+                    <button class="tool-button" id="activateMeasure">Activate</button>
+                </div>
+                <div class="tool-card">
+                    <i class="fas fa-layer-group fa-3x"></i>
+                    <h4>Layer Analysis</h4>
+                    <p>Analyze spatial relationships between layers</p>
+                    <button class="tool-button" id="activateAnalysis">Open</button>
+                </div>
+                <div class="tool-card">
+                    <i class="fas fa-chart-bar fa-3x"></i>
+                    <h4>Statistics</h4>
+                    <p>Generate statistical reports for selected areas</p>
+                    <button class="tool-button" id="activateStatistics">Open</button>
+                </div>
+                <div class="tool-card">
+                    <i class="fas fa-draw-polygon fa-3x"></i>
+                    <h4>Drawing Tools</h4>
+                    <p>Draw polygons and lines for measurement</p>
+                    <button class="tool-button" id="activateDrawing">Activate</button>
+                </div>
+                <div class="tool-card">
+                    <i class="fas fa-vector-square fa-3x"></i>
+                    <h4>Select by Polygon</h4>
+                    <p>Select features by drawing a polygon</p>
+                    <button class="tool-button" id="activateSelectPolygon">Activate</button>
+                </div>
+                <div class="tool-card">
+                    <i class="fas fa-map-marker-alt fa-3x"></i>
+                    <h4>Select by Point</h4>
+                    <p>Select features by clicking on the map</p>
+                    <button class="tool-button" id="activateSelectPoint">Activate</button>
+                </div>
+                <div class="tool-card">
+                    <i class="fas fa-file-export fa-3x"></i>
+                    <h4>Export Data</h4>
+                    <p>Export map images and data in various formats</p>
+                    <button class="tool-button" id="activateExport">Open</button>
+                </div>
+                <div class="tool-card">
+                    <i class="fas fa-search-location fa-3x"></i>
+                    <h4>Advanced Search</h4>
+                    <p>Search by attributes and spatial criteria</p>
+                    <button class="tool-button" id="activateSearch">Open</button>
+                </div>
+                <div class="tool-card">
+                    <i class="fas fa-robot fa-3x"></i>
+                    <h4>AI Assistant</h4>
+                    <p>Get help understanding geology data</p>
+                    <button class="tool-button" id="activateAI">Open</button>
+                </div>
+                <div class="tool-card">
+                    <i class="fas fa-gem fa-3x"></i>
+                    <h4>Rock Identifier</h4>
+                    <p>Identify and classify different rock types</p>
+                    <button class="tool-button" id="activateRockIdentifier">Open</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enhanced Rock Identifier Tab Content -->
+        <div class="tab-content" id="rock-identifier-tab">
+            <div class="rock-identifier-container">
+                <div class="rock-identifier-header">
+                    <h2><i class="fas fa-gem"></i> Rock Identification Service</h2>
+                    <p>Upload images or describe rock characteristics to identify rock types. Get detailed geological information from the Ministry.</p>
+                </div>
+                
+                <!-- User Information Section -->
+                <div class="card user-info-card">
+                    <h3><i class="fas fa-user"></i> User Information</h3>
+                    <div class="form-group">
+                        <label>Select your category:</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="userType" value="public" checked> Public Use
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="userType" value="geologist"> Geologist
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="userType" value="farmOwner"> Farm Owner
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="userType" value="other"> Other (please specify)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group" id="otherSpecifyGroup" style="display: none;">
+                        <label for="otherSpecify">Please specify:</label>
+                        <input type="text" id="otherSpecify">
+                    </div>
+                </div>
+
+                <!-- Identification Methods -->
+                <div class="identification-methods">
+                    <div class="method-card active" data-method="upload">
+                        <i class="fas fa-upload fa-2x"></i>
+                        <h4>Upload Image</h4>
+                        <p>Upload a photo of the rock for identification</p>
+                    </div>
+                    <div class="method-card" data-method="describe">
+                        <i class="fas fa-edit fa-2x"></i>
+                        <h4>Describe Characteristics</h4>
+                        <p>Describe the rock's physical properties</p>
+                    </div>
+                    <div class="method-card" data-method="location">
+                        <i class="fas fa-map-marker-alt fa-2x"></i>
+                        <h4>Location Based</h4>
+                        <p>Identify rocks common in specific locations</p>
+                    </div>
+                </div>
+
+                <!-- Upload Method -->
+                <div class="method-content active" id="upload-method">
+                    <div class="card">
+                        <h3><i class="fas fa-camera"></i> Upload Rock Image</h3>
+                        <div class="image-upload-container">
+                            <div class="upload-area" id="uploadArea">
+                                <i class="fas fa-cloud-upload-alt fa-3x"></i>
+                                <h4>Upload Rock Image</h4>
+                                <p>Drag & drop or click to upload a clear photo of the rock</p>
+                                <input type="file" id="rockImageUpload" accept="image/*" style="display: none;">
+                                <button class="upload-button" id="uploadButton">Choose File</button>
+                            </div>
+                            <button class="btn btn-accent" id="openCameraBtn">
+                                <i class="fas fa-camera"></i> Take Photo with Camera
+                            </button>
+                        </div>
+                        
+                        <div class="camera-container" id="cameraContainer" style="display: none;">
+                            <video id="cameraPreview" autoplay playsinline></video>
+                            <div class="camera-controls">
+                                <button class="btn btn-primary" id="captureBtn">
+                                    <i class="fas fa-camera"></i> Capture Photo
+                                </button>
+                                <button class="btn btn-secondary" id="cancelCameraBtn">
+                                    <i class="fas fa-times"></i> Cancel
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="upload-preview" id="uploadPreview" style="display: none;">
+                            <img id="previewImage" src="" alt="Rock preview">
+                            <div class="preview-controls">
+                                <button class="analyze-button" id="analyzeImage">
+                                    <i class="fas fa-search"></i> Analyze Rock
+                                </button>
+                                <button class="remove-button" id="removeImage">
+                                    <i class="fas fa-trash"></i> Remove
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Describe Method -->
+                <div class="method-content" id="describe-method">
+                    <div class="card">
+                        <h3><i class="fas fa-edit"></i> Describe Rock Characteristics</h3>
+                        <form id="rockDescriptionForm">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="rockColor">Color</label>
+                                    <select id="rockColor">
+                                        <option value="">Select color</option>
+                                        <option value="light">Light (white, light gray, beige)</option>
+                                        <option value="dark">Dark (black, dark gray, dark brown)</option>
+                                        <option value="red">Red or reddish-brown</option>
+                                        <option value="green">Green or greenish</option>
+                                        <option value="multicolor">Multi-colored</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="rockTexture">Texture</label>
+                                    <select id="rockTexture">
+                                        <option value="">Select texture</option>
+                                        <option value="fine">Fine-grained</option>
+                                        <option value="coarse">Coarse-grained</option>
+                                        <option value="glassy">Glassy</option>
+                                        <option value="porous">Porous or vesicular</option>
+                                        <option value="layered">Layered or banded</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="rockHardness">Hardness</label>
+                                    <select id="rockHardness">
+                                        <option value="">Select hardness</option>
+                                        <option value="soft">Soft (can be scratched with fingernail)</option>
+                                        <option value="medium">Medium (can be scratched with coin)</option>
+                                        <option value="hard">Hard (can scratch glass)</option>
+                                        <option value="very-hard">Very hard (can scratch steel)</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="rockWeight">Weight</label>
+                                    <select id="rockWeight">
+                                        <option value="">Select weight</option>
+                                        <option value="light">Light for its size</option>
+                                        <option value="medium">Average weight</option>
+                                        <option value="heavy">Heavy for its size</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="additionalFeatures">Additional Features</label>
+                                <textarea id="additionalFeatures" placeholder="Describe any crystals, fossils, layers, or other distinctive features..."></textarea>
+                            </div>
+                            
+                            <button type="submit" class="analyze-button">
+                                <i class="fas fa-search"></i> Identify Rock
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Location Method -->
+                <div class="method-content" id="location-method">
+                    <div class="card">
+                        <h3><i class="fas fa-map-marker-alt"></i> Location-Based Identification</h3>
+                        <div class="location-search">
+                            <input type="text" id="locationSearch" placeholder="Enter location in Namibia...">
+                            <button class="btn btn-primary" id="searchLocation">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Or click on the map to select location:</label>
+                            <button class="btn btn-accent" id="getLocationBtn">
+                                <i class="fas fa-location-arrow"></i> Use Current Location
+                            </button>
+                            <div class="location-map" id="locationMap">
+                                <!-- Mini map will be initialized here -->
+                            </div>
+                            <div class="coordinates-display" id="coordinatesDisplay">
+                                No location selected
+                            </div>
+                        </div>
+                        
+                        <div class="common-rocks" id="commonRocks">
+                            <h4>Common Rocks in this Area</h4>
+                            <div class="rocks-list" id="rocksList">
+                                <!-- Rocks will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Location Selection for All Methods -->
+                <div class="card location-card">
+                    <h3><i class="fas fa-map-marked-alt"></i> Where was this rock found?</h3>
+                    <div class="form-group">
+                        <button class="btn btn-accent" id="getLocationBtnAll">
+                            <i class="fas fa-location-arrow"></i> Use Current Location
+                        </button>
+                        <div class="location-map-large" id="locationMapAll">
+                            <!-- Large map for location selection -->
+                        </div>
+                        <div class="coordinates-display" id="coordinatesDisplayAll">
+                            No location selected
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div class="results-section" id="resultsSection" style="display: none;">
+                    <div class="card">
+                        <h3 class="result-title">Identification Results</h3>
+                        <div class="results-content" id="resultsContent">
+                            <!-- Results will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Request More Information Form -->
+                <div class="card request-form-card">
+                    <h3><i class="fas fa-info-circle"></i> Request More Information</h3>
+                    <p>If you would like to receive more information about this rock type from the Ministry, please fill out this form:</p>
+                    
+                    <form id="infoRequestForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="fullName">Full Name *</label>
+                                <input type="text" id="fullName" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="email">Email Address *</label>
+                                <input type="email" id="email" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="phone">Phone Number</label>
+                                <input type="tel" id="phone">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="rockTypeFound">Type of Rock Found *</label>
+                                <input type="text" id="rockTypeFound" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="additionalInfo">Additional Information</label>
+                            <textarea id="additionalInfo" placeholder="Any additional details about the rock or your findings..."></textarea>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" id="submitRequestBtn">
+                                <i class="fas fa-paper-plane"></i> Submit Request to Ministry
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="newIdentification">
+                                <i class="fas fa-redo"></i> New Identification
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Welcome Modal -->
+    <div class="modal welcome-modal" id="welcomeModal">
+        <div class="modal-content welcome-content">
+            <div class="welcome-header">
+                <img src="/static/img/Ministry-of-Industries,Mines-and-Energy.png" alt="Ministry of Industries,Mines and Energy" class="logo">
+                <h1>Welcome to Namibia NamGeo App Portal</h1>
+                <img src="/static/img/namibia-geo-survey.png" alt="Geological Survey of Namibia Logo" class="logo">
+            </div>
+            <div class="welcome-body">
+                <p>Explore and analyze Geological and Mineral data with ease, developed by the Geological Survey of Namibia.</p>
+                <div class="welcome-features">
+                    <div class="feature">
+                        <i class="fas fa-map-marked-alt"></i>
+                        <span>Interactive Maps</span>
+                    </div>
+                    <div class="feature">
+                        <i class="fas fa-layer-group"></i>
+                        <span>Multiple Data Layers</span>
+                    </div>
+                    <div class="feature">
+                        <i class="fas fa-search"></i>
+                        <span>Advanced Search</span>
+                    </div>
+                    <div class="feature">
+                        <i class="fas fa-robot"></i>
+                        <span>AI Assistant</span>
+                    </div>
+                    <div class="feature">
+                        <i class="fas fa-gem"></i>
+                        <span>Rock Identifier</span>
+                    </div>
+                </div>
+            </div>
+            <div class="welcome-footer">
+                <button class="welcome-button" id="welcomeCloseButton">Get Started</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal" id="successModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Success!</div>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="successMessage">Your request has been submitted successfully. A geologist will contact you within 3 working days.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="closeModalBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Developer Credit -->
+    <div class="developer-credit">
+        Developed by Spatcon Consultancy Cc
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal login-modal" id="loginModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Login to Drillhole Data Portal</div>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <div class="form-group">
+                    <label>Select Role</label>
+                    <div class="user-role">
+                        <div class="role-btn active" data-role="analyst">Analyst</div>
+                        <div class="role-btn" data-role="dataentry">Data Entry</div>
+                        <div class="role-btn" data-role="admin">Admin</div>
+                    </div>
+                </div>
+                <button type="submit" class="submit-button">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div class="modal register-modal" id="registerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Register for Drillhole Data Portal</div>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="regUsername">Username</label>
+                    <input type="text" id="regUsername" required>
+                </div>
+                <div class="form-group">
+                    <label for="regEmail">Email</label>
+                    <input type="email" id="regEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="regPassword">Password</label>
+                    <input type="password" id="regPassword" required>
+                </div>
+                <div class="form-group">
+                    <label for="regConfirmPassword">Confirm Password</label>
+                    <input type="password" id="regConfirmPassword" required>
+                </div>
+                <div class="form-group">
+                    <label>Select Role</label>
+                    <div class="user-role">
+                        <div class="role-btn active" data-role="analyst">Analyst</div>
+                        <div class="role-btn" data-role="dataentry">Data Entry</div>
+                        <div class="role-btn" data-role="admin">Admin</div>
+                    </div>
+                </div>
+                <button type="submit" class="submit-button">Register</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- AI Assistant Modal -->
+    <div class="modal ai-modal" id="aiModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Geology AI Assistant</div>
+                <div class="ai-controls">
+                    <button id="restartChat" class="ai-control-button">
+                        <i class="fas fa-redo"></i> Restart Chat
+                    </button>
+                    <button class="close-modal">&times;</button>
+                </div>
+            </div>
+            <div class="ai-chat-container">
+                <div class="ai-messages" id="aiMessages">
+                    <div class="ai-message bot">
+                        <p>Hello! I'm your geology assistant. How can I help you understand the geological data today?</p>
+                    </div>
+                </div>
+                <div class="ai-input-container">
+                    <input type="text" id="aiInput" placeholder="Ask about geology, mineral occurrences, or geological formations...">
+                    <button id="sendAiMessage"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact Form Modal -->
+    <div class="modal" id="contactModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Contact the Ministry</div>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="contactForm">
+                <div class="form-group">
+                    <label for="contactName">Name</label>
+                    <input type="text" id="contactName" required>
+                </div>
+                <div class="form-group">
+                    <label for="contactEmail">Email</label>
+                    <input type="email" id="contactEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="contactSubject">Subject</label>
+                    <input type="text" id="contactSubject" required>
+                </div>
+                <div class="form-group">
+                    <label for="contactMessage">Message</label>
+                    <textarea id="contactMessage" required></textarea>
+                </div>
+                <button type="submit" class="submit-button">Submit</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    <script src="https://unpkg.com/leaflet-measure@3.1.0/dist/leaflet-measure.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
